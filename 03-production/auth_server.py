@@ -24,6 +24,10 @@ from mcp.server.auth.settings import AuthSettings
 from mcp.server.mcpserver import MCPServer
 
 # --- Token store (production: dùng DB, Redis, hoặc JWT verification) ---
+# Cổng server — đổi bằng biến môi trường nếu 8000 đã bị chiếm:
+#     MCP_AUTH_PORT=8123 python auth_server.py
+PORT = int(os.environ.get("MCP_AUTH_PORT", "8000"))
+
 VALID_TOKENS: dict[str, str] = {
     os.environ.get("MCP_AUTH_TOKEN", "dev-token-abc123"): "dev-user",
     "prod-key-xyz789": "prod-service",
@@ -48,8 +52,8 @@ class StaticTokenVerifier(TokenVerifier):
 mcp = MCPServer(
     "weather-secure",
     auth=AuthSettings(
-        issuer_url="http://localhost:8000",
-        resource_server_url="http://localhost:8000",
+        issuer_url=f"http://localhost:{PORT}",
+        resource_server_url=f"http://localhost:{PORT}",
     ),
     token_verifier=StaticTokenVerifier(),
 )
@@ -68,4 +72,5 @@ def get_weather(city: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    print(f"Server lắng nghe tại http://localhost:{PORT}/mcp")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=PORT)

@@ -32,7 +32,12 @@ import httpx
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamable_http_client
+import mcp.client.streamable_http as _sh
+
+# mcp 2.x: streamable_http_client (yield 2) | mcp 1.x: streamablehttp_client (yield 3)
+streamable_http_client = getattr(
+    _sh, "streamable_http_client", None
+) or _sh.streamablehttp_client
 
 REGISTRY_PATH = Path(__file__).parent / "registry.json"
 
@@ -105,9 +110,11 @@ async def connect_and_call(match: dict, tool_args: dict) -> str:
             headers["Authorization"] = f"Bearer {token}"
 
         async with httpx.AsyncClient(headers=headers) as http_client:
-            async with streamable_http_client(server["url"], http_client=http_client) as (
-                read, write, _,
-            ):
+            # mcp 2.x yield (read, write); mcp 1.x yield (read, write, get_session_id)
+            async with streamable_http_client(
+                server["url"], http_client=http_client
+            ) as streams:
+                read, write = streams[0], streams[1]
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     result = await session.call_tool(tool_name, tool_args)

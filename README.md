@@ -18,13 +18,19 @@ day26-mcp/
 │   ├── weather_server.py
 │   └── weather_client.py
 │
-└── 03-production/           ← Bước 3: Auth, Tool Registry, Versioning
+├── 03-production/           ← Bước 3: Auth, Tool Registry, Versioning
+│   ├── README.md
+│   ├── auth_server.py
+│   ├── auth_client.py
+│   ├── registry.json
+│   ├── registry_client.py
+│   ├── versioned_server.py
+│   └── versioned_client.py
+│
+└── 04-lab/                  ← Bước 4: Agent thật (ADK + MCP + OpenAI)
     ├── README.md
-    ├── auth_server.py
-    ├── auth_client.py
-    ├── registry.json
-    ├── registry_client.py
-    └── versioned_server.py
+    ├── mcp-server/          ← MCP server (3 tool thời tiết, Streamable HTTP)
+    └── mcp-client/          ← ADK agent đóng vai MCP client
 ```
 
 ## Quick start
@@ -47,7 +53,15 @@ python auth_client.py              # terminal 2
 
 # Production — Tool Registry
 cd 03-production && python registry_client.py
+
+# Lab 04 — ADK agent + MCP server (2 terminal, cần OPENAI_API_KEY)
+cd 04-lab/mcp-server && uv sync && uv run python weather.py    # terminal 1
+cd 04-lab/mcp-client && uv sync && uv run python test_agent.py # terminal 2
 ```
+
+> **Windows:** đặt `PYTHONUTF8=1` trước khi chạy, nếu không tiếng Việt sẽ lỗi `UnicodeEncodeError`.
+>
+> **Cổng 8000 bận:** `03-production` cho phép đổi cổng bằng `MCP_AUTH_PORT=8123`.
 
 ---
 
@@ -226,6 +240,25 @@ Chi tiết + code cho cả 3 phần: xem [`03-production/README.md`](03-producti
 | **Versioning** | 1 tool duy nhất | Tool v1 + v2 song song, deprecation notice |
 | **Health** | Không | Health check, retry, circuit breaker |
 | **Logging** | `print()` | Structured logging, tracing (OpenTelemetry) |
+
+---
+
+---
+
+## [Lab 04 — Ghép tất cả lại: ADK Agent + MCP Server](04-lab/)
+
+Ba phần trên minh hoạ từng khái niệm riêng lẻ. Lab 04 ghép chúng thành **một agent chạy thật**:
+
+```
+┌─────────────────┐  Streamable HTTP  ┌─────────────────┐    REST     ┌──────────────┐
+│   ADK Agent     │ ───────────────── │   MCP Server    │ ─────────── │ WeatherAPI   │
+│ model: OpenAI   │  localhost:8085   │  3 weather tool │             │ (hoặc MOCK)  │
+└─────────────────┘                   └─────────────────┘             └──────────────┘
+```
+
+Điểm học được: **ADK đóng vai MCP Client** — nó tự `list_tools()` từ server, đưa schema cho model, rồi điều phối vòng lặp function calling. Bạn không phải viết tay vòng lặp như ở bài 02 nữa.
+
+Chi tiết + hướng dẫn chạy: xem [`04-lab/README.md`](04-lab/README.md)
 
 ---
 

@@ -12,13 +12,15 @@ Cách chạy (cần auth_server.py đang chạy ở terminal khác):
 from __future__ import annotations
 
 import asyncio
+import os
 
 import httpx
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-SERVER_URL = "http://localhost:8000/mcp"
+PORT = int(os.environ.get("MCP_AUTH_PORT", "8000"))
+SERVER_URL = f"http://localhost:{PORT}/mcp"
 TOKEN = "dev-token-abc123"
 
 

@@ -2,6 +2,8 @@
 
 AI agent built with **Google Agent Development Kit (ADK)** that uses tools from a local **MCP server** via Streamable HTTP transport.
 
+Model: **OpenAI** (`openai/gpt-4o-mini`) thông qua LiteLLM wrapper của ADK.
+
 ## Architecture
 
 ```
@@ -40,7 +42,7 @@ AI agent built with **Google Agent Development Kit (ADK)** that uses tools from 
 
 ```bash
 cd ../mcp-server
-export WEATHERAPI_KEY="your_weatherapi_key"
+export WEATHERAPI_KEY="your_weatherapi_key"   # tuỳ chọn — không có thì dùng MOCK
 uv run python weather.py
 ```
 
@@ -49,9 +51,8 @@ uv run python weather.py
 ```bash
 cd mcp-client
 
-# Create .env file with your Google API key
-# Get free key from: https://aistudio.google.com/apikey
-echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
+# Copy mẫu rồi điền OPENAI_API_KEY
+cp .env.example .env
 ```
 
 ### 3. Install Dependencies
@@ -60,10 +61,12 @@ echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
 uv sync
 ```
 
-### 4. Run the Agent
+### 4. Kiểm tra & chạy
 
 ```bash
-uv run adk web
+uv run python verify_setup.py    # kiểm tra key, deps, MCP server
+uv run python test_agent.py      # chạy nhanh ở dòng lệnh
+uv run adk web                   # hoặc giao diện web
 ```
 
 ### 5. Use the Agent
@@ -71,19 +74,22 @@ uv run adk web
 1. Open browser: http://localhost:8000
 2. Select `weather_agent` from dropdown
 3. Ask questions like:
-   - "What's the weather in Brisbane?"
-   - "Give me a 3-day forecast for Tokyo"
-   - "How's the weather in New York?"
+   - "Thời tiết Hà Nội hôm nay thế nào?"
+   - "Cho tôi dự báo 3 ngày ở Đà Nẵng"
+   - "Hải Phòng có mưa không?"
 
 ## Project Structure
 
 ```
 mcp-client/
 ├── weather_agent/
-│   ├── agent.py           # Main agent with MCP connection
+│   ├── agent.py           # Agent + kết nối MCP
 │   └── __init__.py
+├── test_agent.py          # Chạy thử ở dòng lệnh
+├── verify_setup.py        # Kiểm tra môi trường
+├── .env.example           # Mẫu cấu hình
+├── .env                   # Key thật (tự tạo, đã gitignore)
 ├── pyproject.toml
-├── .env                   # Environment variables (create this)
 └── README.md
 ```
 
@@ -94,16 +100,19 @@ mcp-client/
 In `weather_agent/agent.py`:
 
 ```python
-MCP_SERVER_URL = "http://localhost:8085/mcp"
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8085/mcp")
 
-connection_params = StreamableHTTPConnectionParams(
-    url=MCP_SERVER_URL,
-    timeout=30.0,
+weather_tools = McpToolset(
+    connection_params=StreamableHTTPConnectionParams(
+        url=MCP_SERVER_URL,
+        timeout=30.0,
+    ),
 )
 
 root_agent = Agent(
     name="weather_agent",
-    model="gemini-2.5-flash",
+    model=LiteLlm("openai/gpt-4o-mini"),   # OpenAI qua LiteLLM
+    instruction=INSTRUCTION,
     tools=[weather_tools],
 )
 ```
@@ -123,16 +132,18 @@ root_agent = Agent(
 3. **Timeout errors**: Server not started
    - Start the MCP server first, then the ADK client
 
-### Fallback Mode
+### Lỗi tiếng Việt trên Windows
 
-If MCP connection fails, the agent runs in fallback mode without tools.
-Fix the connection and restart ADK web.
+Console Windows dùng cp1252 → `UnicodeEncodeError`. Đặt `PYTHONUTF8=1` trước khi chạy.
 
 ## Environment Variables
 
-Create `.env` file:
+Tạo file `.env` (xem `.env.example`):
 ```bash
-GOOGLE_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=sk-...
+# OPENAI_MODEL=openai/gpt-4o-mini      # tuỳ chọn
+# GOOGLE_API_KEY=...                   # tuỳ chọn, dùng Gemini thay OpenAI
+# MCP_SERVER_URL=http://localhost:8085/mcp
 ```
 
 ## Resources
